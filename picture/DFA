@@ -1,0 +1,6 @@
+digraph {
+	q0 [label=q0 shape=circle]
+	start [label=start shape=none]
+	start -> q0
+	rankdir=LR
+}

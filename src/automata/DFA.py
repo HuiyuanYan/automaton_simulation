@@ -70,7 +70,7 @@ class DFA:
                 sys.stderr.write(e.__str__()+'\n')
                 return
     
-    def set_alphabet(self,alphabet:List[str]):
+    def set_alphabet(self,alphabet:set[str]):
         '''
         Set alphabet for DFA.
         '''
@@ -279,6 +279,29 @@ class DFA:
             
             Defaults to False.
         """
+        def remove_unreachable_states():
+            """Remove unreachable states of DFA
+            """
+            st = []
+            visit = []
+            st.append(self.__q0)
+            while len(st)!= 0:
+                top = st.pop()
+                visit.append(top)
+                if top in self.__deltas.keys():
+                    for (ch,next) in self.__deltas[top]:
+                        if next not in visit:
+                            st.append(next)
+                            visit.append(next)
+            
+            # remove transition
+            for key in list(self.__deltas.keys()):
+                if key not in visit:
+                    del self.__deltas[key]
+            self.__Q = visit.copy()
+        
+
+        remove_unreachable_states()
         states_num = len(self.__Q)
         table = [[0]*states_num for _ in range(states_num)]
         # Initialize
@@ -378,3 +401,13 @@ class DFA:
         self.__finish_states.clear()
         self.__Q.clear()
         self.__q0 = ''
+
+if __name__ == '__main__':
+    d = DFA()
+    d.set_alphabet({'0','1'})
+    d.add_states(['q0','q1','q2'])
+    d.set_q0('q0')
+    d.set_finish_states(['q2'])
+    d.set_deltas({'q1':[('0','q2')]})
+    d.minimize()
+    d.draw()

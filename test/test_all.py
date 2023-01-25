@@ -15,7 +15,8 @@ def test_all():
     NFA_test.test_all()
     print('test result: \033[32mpass\033[0m\n')
 
-
     print('All tests passed.')
+
+
 if __name__ == "__main__":
     test_all()
