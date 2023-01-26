@@ -1,4 +1,5 @@
 # 各类自动机模拟实现
+项目地址： <a href="url">https://github.com/HuiyuanYan/automaton_simulation</a>
 ## 一、概述
 本项目基于《编译原理》第二版和《自动机理论、语言和计算导论》第三版，以及网络资料，实现包括DFA、NFA在内的多种自动机，使用python语言进行编程，以期加深对自动机的理解。
 ## 二、项目结构
