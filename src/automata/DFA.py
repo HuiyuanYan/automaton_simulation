@@ -440,13 +440,13 @@ class DFA:
                                     re_matrix[i][j] += f'+{ch}'
         
         for k in range(0,states_num):
-            print(re_matrix)
+            # print(re_matrix)
             temp_matrix = [[''for i in range(0,states_num)]for j in range(0,states_num)]
             for i in range(0,states_num):
                 for j in range(0,states_num):
                     temp_matrix[i][j] = generate_re(i,j,k)
             re_matrix = temp_matrix.copy()
-        print(re_matrix)
+        # print(re_matrix)
 
         ret = ''
         start_idx = self.__Q.index(self.__q0)

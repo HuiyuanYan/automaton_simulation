@@ -58,7 +58,7 @@ def test_to_regex():
             'q1':[('0','q1'),('1','q1')]
         }
     )
-    print(d.to_regex())
+    # print(d.to_regex())
     pass
 
 
@@ -69,5 +69,5 @@ def test_all():
     test_to_regex()
 
 if __name__ == '__main__':
-    test_to_regex()
+    test_all()
 
