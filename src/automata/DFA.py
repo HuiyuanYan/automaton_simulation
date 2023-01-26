@@ -287,18 +287,18 @@ class DFA:
             st.append(self.__q0)
             while len(st)!= 0:
                 top = st.pop()
-                visit.append(top)
+                if top not in visit:
+                    visit.append(top)
                 if top in self.__deltas.keys():
                     for (ch,next) in self.__deltas[top]:
                         if next not in visit:
                             st.append(next)
-                            visit.append(next)
             
             # remove transition
             for key in list(self.__deltas.keys()):
                 if key not in visit:
                     del self.__deltas[key]
-            self.__Q = visit.copy()
+            self.__Q = sorted(visit.copy())
         
 
         remove_unreachable_states()
@@ -308,9 +308,11 @@ class DFA:
         for i in range(0,len(self.__Q)):
             if self.__Q[i] in self.__finish_states:
                 for j in range(0,i):
-                    table[i][j] = 1 #x
+                    if self.__Q[j] not in self.__finish_states:
+                        table[i][j] = 1 #x
                 for k in range(i+1,states_num):
-                    table[k][i] = 1 #x
+                    if self.__Q[k] not in self.__finish_states:
+                        table[k][i] = 1 #x
         
         updated = False
         while 1:
@@ -326,7 +328,7 @@ class DFA:
                             updated = True
             if updated == False:
                 break
-        
+
         d = ds.DisjointSet(self.__Q)
         for j in range(0,states_num-1):
             for i in range(j+1,states_num):
@@ -385,7 +387,79 @@ class DFA:
             self.__finish_states = new_finsih_states
             self.__deltas = new_deltas
             return None
+
+    def to_regex(self)->str:
+        """Generate regular expressions corresponding to the DFA.
+
+        Returns:
+            str: regular expressions
+        """
+        def generate_re(i,j,k)->str:
+            R_ij = re_matrix[i][j]
+            R_ik = re_matrix[i][k]
+            R_kk = re_matrix[k][k]
+            R_kj = re_matrix[k][j]
             
+            if len(R_ik) > 1:
+                R_ik = f'({R_ik})'
+            if len(R_kj) > 1:
+                R_kj = f'({R_kj})'
+
+            ret = R_ij
+            if len(R_ik) == 0 or len(R_kk) == 0 or len(R_kj) == 0:
+                return ret
+            else:
+                if len(R_ij) == 0:
+                    ret = f'{R_ik}({R_kk})*{R_kj}'
+                else:
+                    ret = R_ij + '+' f'{R_ik}({R_kk})*{R_kj}'
+            return ret
+
+        epsilon = 'ε'
+        states_num = len(self.__Q)
+        re_matrix = [[''for i in range(0,states_num)]for j in range(0,states_num)]
+
+        for i in range(0,states_num):
+            for j in range(0,states_num):
+                state_i = self.__Q[i]
+                state_j = self.__Q[j]
+                if i == j:
+                    re_matrix[i][j] += epsilon
+                    for (ch,next) in self.__deltas[state_i]:
+                        if next == state_i:
+                            re_matrix[i][j] += f'+{ch}'
+                else:        
+                    first = True
+                    if state_i in self.__deltas.keys():
+                        for (ch,next) in self.__deltas[state_i]:
+                            if next == state_j:
+                                if first == True:
+                                    re_matrix[i][j] += f'{ch}'
+                                    first = False
+                                else:
+                                    re_matrix[i][j] += f'+{ch}'
+        
+        for k in range(0,states_num):
+            print(re_matrix)
+            temp_matrix = [[''for i in range(0,states_num)]for j in range(0,states_num)]
+            for i in range(0,states_num):
+                for j in range(0,states_num):
+                    temp_matrix[i][j] = generate_re(i,j,k)
+            re_matrix = temp_matrix.copy()
+        print(re_matrix)
+
+        ret = ''
+        start_idx = self.__Q.index(self.__q0)
+        first = True
+        for finish_state in self.__finish_states:
+            idx = self.__Q.index(finish_state)
+            if first == True:
+                ret += re_matrix[start_idx][idx]
+                first = False
+            else:
+                ret += f'+{re_matrix[start_idx][idx]}'
+        return ret
+
     def __str__(self) -> str:
         return f"States   : {self.__Q} \n"\
                f"Alphabet : {self.__alphabet}\n"\
@@ -403,11 +477,4 @@ class DFA:
         self.__q0 = ''
 
 if __name__ == '__main__':
-    d = DFA()
-    d.set_alphabet({'0','1'})
-    d.add_states(['q0','q1','q2'])
-    d.set_q0('q0')
-    d.set_finish_states(['q2'])
-    d.set_deltas({'q1':[('0','q2')]})
-    d.minimize()
-    d.draw()
+    pass

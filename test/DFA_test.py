@@ -46,10 +46,28 @@ def test_minimize():
     assert d.run('10') == new_d.run('10')
     assert d.run('010') == new_d.run('010')
 
+def test_to_regex():
+    d = DFA_SRC.DFA()
+    d.set_alphabet(['0','1'])
+    d.add_states(['q0','q1'])
+    d.set_q0('q0')
+    d.set_finish_states(['q1'])
+    d.set_deltas(
+        {
+            'q0':[('0','q1'),('1','q0')],
+            'q1':[('0','q1'),('1','q1')]
+        }
+    )
+    print(d.to_regex())
+    pass
+
+
+
 def test_all():
     test_dfa1()
     test_minimize()
+    test_to_regex()
 
 if __name__ == '__main__':
-    test_dfa1()
-    test_minimize()
+    test_to_regex()
+

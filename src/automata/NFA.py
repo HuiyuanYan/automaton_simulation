@@ -476,7 +476,6 @@ class NFA:
                                 (ch == '*' and nextch == '(') or \
                                     (ch == ')' and nextch == '('):
                         temp_str += '.'
-                
             st = []
             postfix = ''
             for i in range(0,len(temp_str)):
@@ -487,28 +486,30 @@ class NFA:
                     if len(st) == 0:# st is empty
                         st.append(ch)
                     else:
-                        top = st[len(st)-1]
-                        if property_level[ch] <= property_level[top]:
-                            while property_level[top] >= property_level[ch]:
-                                if top != '(' and top != ')':
-                                    postfix += top
-                                st.pop()
-
-                                if len(st) == 0:
-                                    break
-                                else:
-                                    top = st[len(st)-1]
-                            
+                        if ch == '(':
                             st.append(ch)
+                        elif ch == ')':
+                            top = st[len(st)-1]
+                            while(top != '('):
+                                postfix += st.pop()
+                                top = st[len(st)-1]
+                            st.pop()
                         else:
+                            top = st[len(st)-1]
+                            if property_level[ch] <= property_level[top]:
+                                while property_level[top] >= property_level[ch]:
+                                        postfix += st.pop()
+                                        if len(st) == 0:
+                                            break
+                                        else:
+                                            top = st[len(st)-1]
                             st.append(ch)
-            
+
             while len(st)!= 0:
                 top = st[len(st)-1]
                 if top != '(' and top!= ')':
                     postfix += top
                 st.pop()
-
             return postfix
 
         def concat(start:str,end:str):

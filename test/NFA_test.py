@@ -69,6 +69,14 @@ def test_regex_to_NFA():
     n.regex_to_NFA('',copy=False)
     assert n.run('') == True
 
+    n.regex_to_NFA('1*0(0|1)*',copy=False)
+    d = n.to_DFA()
+    d.minimize()
+    assert len(d.Q()) == 2
+    assert d.run('1110') == True
+    assert d.run('1') == False
+    assert d.run('111100001') == True
+
 
 def test_all():
     test_nfa1()
