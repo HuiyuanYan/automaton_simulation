@@ -14,10 +14,10 @@ from automata.myException import DuplicateStateException,NoneexistentStateExcept
 class DFA:
     def __init__(self):
         self.__Q = [] # states
-        self.__alphabet = []
-        self.__deltas = {}
+        self.__alphabet = set()
+        self.__deltas = dict()
         self.__q0 = '' # start state
-        self.__finish_states = [] # finish state
+        self.__finish_states = set() # finish state
         pass
 
     def add_state(self,state:str):
@@ -54,15 +54,16 @@ class DFA:
             sys.stderr.write(e.__str__()+'\n')
             return
     
-    def set_finish_states(self,finish_states:List[str]):
+    def set_finish_states(self,finish_states:set[str]):
         '''
         Set finish states for DFA.
         '''
+        self.__finish_states.clear()
         for f in finish_states:
             try:
                 if f in self.__Q:
                     if f not in self.__finish_states:
-                        self.__finish_states.append(f)
+                        self.__finish_states.add(f)
                 else:
                     raise NoneexistentStateException(f)
             except NoneexistentStateException as e:
@@ -74,13 +75,14 @@ class DFA:
         '''
         Set alphabet for DFA.
         '''
+        self.__alphabet.clear()
         for letter in alphabet:
             try:
                 if len(letter) != 1:
                     raise IncorrectLetterlLengthException(letter)
                 else:
                     if letter not in self.__alphabet:
-                        self.__alphabet.append(letter)
+                        self.__alphabet.add(letter)
             except IncorrectLetterlLengthException as e:
                 self.__alphabet.clear()
                 sys.stderr.write(e.__str__()+'\n')
@@ -114,6 +116,7 @@ class DFA:
         deltas: Set of transitions.
         transtion format: (src,(letter,target))
         '''
+        self.__deltas.clear()
         for key,value in deltas.items():
             for (letter,next) in value:
                 self.add_delta(key,letter,next)
@@ -340,7 +343,7 @@ class DFA:
         # Redesign DFA
         new_Q = [f'q{i}'for i in range(0,len(set_list))]
         new_q0 = ''
-        new_finsih_states = []
+        new_finsih_states = set()
         new_deltas = {}
         for l in set_list:
             if self.__q0 in l:
@@ -350,7 +353,7 @@ class DFA:
         for l in set_list:
             for f in self.__finish_states:
                 if f in l:
-                    new_finsih_states.append(f'q{set_list.index(l)}')
+                    new_finsih_states.add(f'q{set_list.index(l)}')
         
         for (pre,deltas) in self.__deltas.items():
             for (letter,next) in deltas:
@@ -459,6 +462,301 @@ class DFA:
             else:
                 ret += f'+{re_matrix[start_idx][idx]}'
         return ret
+
+    def is_empty(self)->bool:
+        """Test whether the DFA/regular accepted language is empty(Ø).
+
+        Note that "empty" here refers to not accepting any language, which is different from the epsilon.
+        
+        Returns:
+            bool: result
+        """
+        # Check whether the finish states are reachable, if there is a finish state is reachable, return True.
+        # method: DFS
+        st = []
+        visit = set()
+        st.append(self.__q0)
+        while len(st)!= 0:
+            top = st.pop()
+            visit.add(top)
+            if top in self.__deltas:
+                for ch,next in self.__deltas[top]:
+                    if next not in visit:
+                        st.append(next)
+        for state in self.__finish_states:
+            if state in visit:
+                return False
+        return True
+
+    def is_equal(self,other)->bool:
+        """Determines whether the languages accepted by the two Dfas are equivalent.
+
+        Args:
+            other (DFA): a DFA
+
+        Returns:
+            bool: result
+
+        Method: Product DFA.
+
+        F = set({q1,q2}), where q1 is in F1 and q2 is not in F2, or q1 is not in F1 and q2 is in F2.
+
+        If the language accepted by 'ap' is empty, then L(a1) = L(a2).
+        
+        If not, then L(a1) = L(a2).
+
+        This can be checked traversing the state transitions of the DFA.
+        """
+        ap = self.__caculate_product_dfa(self,other)
+
+        f1 = self.finish_states()
+        f2 = other.finish_states()
+        ap_finish = set()
+        for q in ap.Q():
+            q1,q2 = q.split(',')
+            if q1 in f1 and q2 not in f2:
+                ap_finish.add(f'{q1},{q2}')
+            elif q1 not in f1 and q2 in f2:
+                ap_finish.add(f'{q1},{q2}')
+                
+        
+        ap.set_finish_states(ap_finish)
+        if ap.is_empty():
+            #Also, There must be a path from the beginning to the acceptance of both DFAs.
+            st = [ap.q0()]
+            vis = set()
+            ap_trans = ap.deltas()
+            while len(st) > 0:
+                q = st[len(st)-1]
+                st.pop()
+                vis.add(q)
+                if q in ap_trans:
+                    for ch,p in ap_trans[q]:
+                        if p not in vis:
+                            st.append(p)
+            for s in vis:
+                q0,q1 = s.split(',')
+                if q0 in f1 and q1 in f2:
+                    return True
+            return False
+        else:
+            return False
+
+    def __caculate_product_dfa(self,a1,a2):
+        """Caculate the product of two DFAs, without setting finish states.
+
+        Args:
+            other (DFA): a dfa.
+        
+        For DFA a1 and a2, generate the product DFA ap like this:
+
+        ∑ = ∑1 | ∑2
+
+        Q = {Q1 x Q2}, cartesian product of two sets of states.
+        
+        δ({q1,q2},c) = ({p1,p2}) ,where δ1(q1,c)=p1, δ2(q2,c)=p2.
+
+        q0 = {q0_1, q0_2}
+        """
+        ap = DFA() # product DFA
+        ap.set_alphabet(a1.alphabet() | a2.alphabet())
+        ap_states = []
+
+
+        Q1 = a1.Q()
+        Q2 = a2.Q()
+
+        deltas1 = a1.deltas()
+        deltas2 = a2.deltas()
+
+        for q1 in Q1:
+            for q2 in Q2:
+                ap_states.append(f'{q1},{q2}')
+        
+
+
+        ap.add_states(ap_states)
+        ap.set_q0(f'{a1.q0()},{a2.q0()}')
+        
+        for s in ap_states:
+            q1,q2 = s.split(',')
+            if q1 not in deltas1 or q2 not in deltas2:
+                continue
+            for t1 in deltas1[q1]:
+                ch1 = t1[0]
+                p1 = t1[1]
+                for t2 in  deltas2[q2]:
+                    ch2 = t2[0]
+                    p2 = t2[1]
+                    if ch1 == ch2:
+                        ap.add_delta(
+                            f'{q1},{q2}',
+                            ch1,
+                            f'{p1},{p2}'
+                        )
+        return ap
+
+    def intersection(self,other):
+        """Caculate the intersection of two DFAs.
+
+        Args:
+            other (DFA): a dfa.
+        """
+        
+        alphabet = self.__alphabet | other.alphabet()
+        f1 = self.__finish_states
+        f2 = other.finish_states()
+
+        a1 = self.complement_transitions(self,alphabet,_copy =True)
+        a2 = other.complement_transitions(other,alphabet,_copy = True)
+        
+        ap = self.__caculate_product_dfa(a1,a2)
+    
+        f1 = self.finish_states()
+        f2 = other.finish_states()
+        ap_finish = set()
+        for s in ap.Q():
+            q1,q2 = s.split(',')
+            if q1 in f1 and q2 in f2:
+                ap_finish.add(s)
+        ap.set_finish_states(ap_finish)
+        ap.minimize()
+        return ap
+
+    
+    def union(self,other):
+        """Caculate the union of two DFAs.
+
+        Args:
+            other (DFA): a dfa.
+        """
+        alphabet = self.__alphabet | other.alphabet()
+        f1 = self.__finish_states
+        f2 = other.finish_states()
+
+        a1 = self.complement_transitions(self,alphabet,_copy =True)
+        a2 = other.complement_transitions(other,alphabet,_copy = True)
+        
+        ap = self.__caculate_product_dfa(a1,a2)
+        ap_finish = set()
+        for q in ap.Q():
+            q1,q2 = q.split(',')
+            if q1 in f1 or q2 in f2:
+                ap_finish.add(q)
+        ap.set_finish_states(ap_finish)
+        ap.minimize()
+        return ap
+
+        
+
+
+    def complement_transitions(self,a,alphabet,_copy = False):
+        """Complement the transitions in alphabet.
+
+        Args:
+            a (DFA): DFA a.
+            
+            copy (bool): If true, return a new copy.
+        """
+        alphabet_copy = copy.deepcopy(alphabet)
+        old_copy = None
+        if _copy == True:
+            old_copy = copy.deepcopy(a)
+        
+        delta = a.deltas()
+        a.set_alphabet(alphabet_copy)
+        states = a.Q()
+        dead_state = ''
+        for q in states:
+            ch_list = copy.deepcopy(alphabet_copy)
+            if q in delta:
+                for ch,p in delta[q]:
+                    ch_list.remove(ch)
+            if len(ch_list) != 0:
+                if len(dead_state) == 0:
+                    dead_state = 'q_dead'
+                    a.add_state(dead_state)
+                    for c in alphabet_copy:
+                        a.add_delta(
+                            dead_state,
+                            c,
+                            dead_state
+                        )
+                for ch in ch_list:
+                    a.add_delta(
+                        q,
+                        ch,
+                        dead_state
+                    )
+        if _copy == True: 
+            # restore the original DFA 'a' and return a new copy
+            ret = copy.deepcopy(a)
+            a.clear()
+            a.set_alphabet(old_copy.alphabet())
+            a.add_states(old_copy.Q())
+            a.set_deltas(old_copy.deltas())
+            a.set_q0(old_copy.q0())
+            a.set_finish_states(old_copy.finish_states())
+            return ret
+        return None
+
+    def complement(self):
+        """Caculate the complement of DFA.
+        """
+        a = self.complement_transitions(self,self.__alphabet, _copy = True)
+        states = a.Q()
+        finish = a.finish_states()
+        deltas = a.deltas()
+
+        ac = DFA()
+        ac_states = [f'q{i}'for i in range(0,len(states))]
+        ac_q0 = f'q{states.index(a.q0())}'
+        ac_finish = set()
+
+        for q in states:
+            if q not in finish:
+                ac_finish.add(f'q{states.index(q)}')
+
+        ac.set_alphabet(self.__alphabet)
+        ac.add_states(ac_states)
+        ac.set_q0(ac_q0)
+        ac.set_finish_states(ac_finish)
+
+        for q in states:
+            if q in deltas:
+                for ch,p in deltas[q]:
+                    ac.add_delta(
+                        f'q{states.index(q)}',
+                        ch,
+                        f'q{states.index(p)}'
+                    )
+        return ac
+
+    def difference(self,other):
+        """Caculate the difference of two DFAs.
+
+        Args:
+            other (DFA): a dfa.
+        """
+        alphabet = self.__alphabet | other.alphabet()
+        f1 = self.__finish_states
+        f2 = other.finish_states()
+
+        a1 = self.complement_transitions(self,alphabet,_copy =True)
+        a2 = other.complement_transitions(other,alphabet,_copy = True)
+        
+        ap = self.__caculate_product_dfa(a1,a2)
+
+        ap_finish = set()
+        
+        for s in ap.Q():
+            q1,q2 = s.split(',')
+            if q1 in f1 and q2 not in f2:
+                ap_finish.add(s)
+        ap.set_finish_states(ap_finish)
+        ap.minimize()
+        return ap
+
 
     def __str__(self) -> str:
         return f"States   : {self.__Q} \n"\

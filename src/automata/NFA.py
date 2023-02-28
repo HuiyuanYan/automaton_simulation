@@ -14,10 +14,10 @@ class NFA:
     """
     def __init__(self):
         self.__Q = [] # states
-        self.__alphabet = []
-        self.__deltas = {}
+        self.__alphabet = set()
+        self.__deltas = dict()
         self.__q0 = '' # start state
-        self.__finish_states = [] # finish state
+        self.__finish_states = set() # finish state
         self.__epsilon = 'ε'
         pass
 
@@ -55,7 +55,7 @@ class NFA:
             sys.stderr.write(e.__str__()+'\n')
             return
     
-    def set_finish_states(self,finish_states:List[str]):
+    def set_finish_states(self,finish_states:set[str]):
         '''
         Set finish states for NFA.
         '''
@@ -63,7 +63,7 @@ class NFA:
             try:
                 if f in self.__Q:
                     if f not in self.__finish_states:
-                        self.__finish_states.append(f)
+                        self.__finish_states.add(f)
                 else:
                     raise NoneexistentStateException(f)
             except NoneexistentStateException as e:
@@ -71,7 +71,7 @@ class NFA:
                 sys.stderr.write(e.__str__()+'\n')
                 return
     
-    def set_alphabet(self,alphabet:List[str]):
+    def set_alphabet(self,alphabet:set[str]):
         '''
         Set alphabet for NFA.
         '''
@@ -82,7 +82,7 @@ class NFA:
                     raise IncorrectLetterlLengthException(letter)
                 else:
                     if letter not in self.__alphabet:
-                        self.__alphabet.append(letter)
+                        self.__alphabet.add(letter)
             except IncorrectLetterlLengthException as e:
                 self.__alphabet.clear()
                 sys.stderr.write(e.__str__()+'\n')
@@ -364,11 +364,11 @@ class NFA:
             d.add_state(Dstates[i][1])
         if len(Dstates)>0:
             d.set_q0(Dstates[0][1])
-        D_finish_states = []
+        D_finish_states = set()
         for i in range(0,len(Dstates)):
             for state in Dstates[i][0]:
                 if state in self.__finish_states:
-                    D_finish_states.append(Dstates[i][1])
+                    D_finish_states.add(Dstates[i][1])
         d.set_finish_states(D_finish_states)
         d.set_deltas(Dtrans)
         
@@ -685,7 +685,7 @@ class NFA:
             self.set_alphabet(re_alphabet)
             self.add_states(re_states)
             self.set_q0(re_start)
-            self.set_finish_states([re_end])
+            self.set_finish_states({re_end})
             self.set_deltas(re_trans)
             if to_dfa == True:
                 self.to_DFA()
@@ -695,7 +695,7 @@ class NFA:
             n.set_alphabet(re_alphabet)
             n.add_states(re_states)
             n.set_q0(re_start)
-            n.set_finish_states([re_end])
+            n.set_finish_states({re_end})
             n.set_deltas(re_trans)
             if to_dfa == True:
                 n.to_DFA()

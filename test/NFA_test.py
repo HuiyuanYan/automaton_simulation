@@ -5,10 +5,10 @@ import src.automata.NFA as NFA_SRC
 
 def test_nfa1():
     n = NFA_SRC.NFA()
-    n.set_alphabet(['0','1'])
+    n.set_alphabet({'0','1'})
     n.add_states(['q0','q1','q2'])
     n.set_q0('q0')
-    n.set_finish_states(['q2'])
+    n.set_finish_states({'q2'})
     n.set_deltas(
         {'q0':[('0',{'q1','q2'}),('1',{'q0'}),(n.epsilon(),{'q2'})],
         'q1':[('0',{'q1'}),('1',{'q2'})]
@@ -21,10 +21,10 @@ def test_nfa1():
 
 def test_to_DFA():
     n = NFA_SRC.NFA()
-    n.set_alphabet(['a','b'])
+    n.set_alphabet({'a','b'})
     n.add_states(['0','1','2','3','4','5','6','7','8','9','10'])
     n.set_q0('0')
-    n.set_finish_states(['10'])
+    n.set_finish_states({'10'})
     n.set_deltas(
         {
             '0':[(n.epsilon(),{'1','7'})],

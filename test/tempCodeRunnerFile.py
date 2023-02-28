@@ -1,0 +1,1 @@
+st_is_equal3()
