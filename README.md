@@ -1,3 +1,22 @@
+# 5.7更新
+其实很早之前就已经写了，没来得及更新。。。
+## 自动机实现
++ 更新了PDA（下推自动机）的实现，见`src/automata/PDA.py`
++ 更新了CFG（上下文无关文法的实现）和LL1解析器，见`src/automata/CFG.py`
++ 修补和优化了一些DFA,NFA实现的bug，为`NFA`正则添加了正则语法`[] . * +`，见`automata/NFA.py`
++ 为了实现上述两个自动机，新实现了数据结构“多键字典”，可见`container/multi_key_dict.py`。
+## 词法解析器
++ 实现了一个基于DFA的简单词法解析器，见`lexer/lexer.py`。
++ 在`lexer/cmm_define.py`中定义了一系列词法规则，可以按需进行修改。
++ 直接运行`lexer/lexer.py`可对`example.cmm`中的文件进行词法解析。
+
+## 未来计划
++ 基于已经实现的自动机实现语法分析器。
++ 优化、重构已实现的代码。
++ 补全README中对PDA、CFG、Lexer等的介绍。
+
+
+最近可能没时间。。。先鸽为敬。
 # 各类自动机模拟实现
 项目地址： <a href="url">https://github.com/HuiyuanYan/automaton_simulation</a>
 ## 一、概述
@@ -71,7 +90,7 @@ else return false;
 + Example:
 ```python
 d = DFA()
-d.add_states({'q0','q1','q2','q3'})
+d.add_states(['q0','q1','q2','q3'])
 d.set_alphabet({'0','1'})
 d.set_q0('q0')
 d.set_finish_states({'q3'})
@@ -181,7 +200,7 @@ nk --states-->nj
 ``` python
 d = DFA_SRC.DFA()
 d.set_alphabet({'0','1'})
-d.add_states({'q0','q1'})
+d.add_states(['q0','q1'])
 d.set_q0('q0')
 d.set_finish_states({'q1'})
 d.set_deltas(

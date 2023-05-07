@@ -169,6 +169,25 @@ class DFA:
             sys.stderr.write(e.__str__()+'\n')
             return None
 
+    def single_move(self,q:str,ch:str):
+        """single move
+
+        Args:
+            q (str): pre state
+            ch (str): character
+
+        Returns:
+            p: if delta(q,ch) = p, it returns p;
+
+            else it returns None.
+        """
+        if q not in self.__Q or q not in self.__deltas:
+            return None
+        for c,p in self.__deltas[q]:
+            if c == ch:
+                return p
+        return None
+
     def run(self,input:str,verbose = False)->bool:
         """Simulate input string on DFA.
 
@@ -238,6 +257,15 @@ class DFA:
                     edges_list.append([key,next,letter])
         # Add edges in the list to the directed graph
         for src,target,label in edges_list:
+            if len(label)>1:
+                label_list = label.split(',')
+                label_list.sort()
+                label = ''
+                for l in label_list:
+                    if len(label) == 0:
+                        label += l
+                    else:
+                        label += f',{l}'
             G.edge(src,target,label)
         G.attr(rankdir = 'LR')
         G.view()
@@ -607,8 +635,8 @@ class DFA:
         f1 = self.__finish_states
         f2 = other.finish_states()
 
-        a1 = self.complement_transitions(self,alphabet,_copy =True)
-        a2 = other.complement_transitions(other,alphabet,_copy = True)
+        a1 = self.complement_transitions(self,alphabet,new_copy =True)
+        a2 = other.complement_transitions(other,alphabet,new_copy = True)
         
         ap = self.__caculate_product_dfa(a1,a2)
     
@@ -634,8 +662,8 @@ class DFA:
         f1 = self.__finish_states
         f2 = other.finish_states()
 
-        a1 = self.complement_transitions(self,alphabet,_copy =True)
-        a2 = other.complement_transitions(other,alphabet,_copy = True)
+        a1 = self.complement_transitions(self,alphabet,new_copy =True)
+        a2 = other.complement_transitions(other,alphabet,new_copy = True)
         
         ap = self.__caculate_product_dfa(a1,a2)
         ap_finish = set()
@@ -650,7 +678,7 @@ class DFA:
         
 
 
-    def complement_transitions(self,a,alphabet,_copy = False):
+    def complement_transitions(self,a,alphabet,new_copy = False):
         """Complement the transitions in alphabet.
 
         Args:
@@ -660,7 +688,7 @@ class DFA:
         """
         alphabet_copy = copy.deepcopy(alphabet)
         old_copy = None
-        if _copy == True:
+        if new_copy == True:
             old_copy = copy.deepcopy(a)
         
         delta = a.deltas()
@@ -688,7 +716,7 @@ class DFA:
                         ch,
                         dead_state
                     )
-        if _copy == True: 
+        if new_copy == True: 
             # restore the original DFA 'a' and return a new copy
             ret = copy.deepcopy(a)
             a.clear()
@@ -703,7 +731,7 @@ class DFA:
     def complement(self):
         """Caculate the complement of DFA.
         """
-        a = self.complement_transitions(self,self.__alphabet, _copy = True)
+        a = self.complement_transitions(self,self.__alphabet, new_copy = True)
         states = a.Q()
         finish = a.finish_states()
         deltas = a.deltas()
@@ -742,8 +770,8 @@ class DFA:
         f1 = self.__finish_states
         f2 = other.finish_states()
 
-        a1 = self.complement_transitions(self,alphabet,_copy =True)
-        a2 = other.complement_transitions(other,alphabet,_copy = True)
+        a1 = self.complement_transitions(self,alphabet,new_copy =True)
+        a2 = other.complement_transitions(other,alphabet,new_copy = True)
         
         ap = self.__caculate_product_dfa(a1,a2)
 

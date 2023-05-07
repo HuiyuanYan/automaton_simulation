@@ -250,7 +250,7 @@ class NFA:
                                 st.append(state)
             
         return result
-    def draw(self,name = 'NFA',path:str = default_save_path,):
+    def draw(self,name = 'NFA',path:str = default_save_path):
         """Draw picture for NFA.
 
         Args:
@@ -287,6 +287,15 @@ class NFA:
         
         # Add edges in the list to the directed graph
         for src,target,label in edges_list:
+            if len(label)>1:
+                label_list = label.split(',')
+                label_list.sort()
+                label = ''
+                for l in label_list:
+                    if len(label) == 0:
+                        label += l
+                    else:
+                        label += f',{l}'
             G.edge(src,target,label)
         G.attr(rankdir = 'LR')
         G.view()
@@ -371,7 +380,6 @@ class NFA:
                     D_finish_states.add(Dstates[i][1])
         d.set_finish_states(D_finish_states)
         d.set_deltas(Dtrans)
-        
         '''
         for it in Dstates:
             print(it)
@@ -387,7 +395,7 @@ class NFA:
         self.__deltas.clear()
         self.__finish_states.clear()
     
-    def regex_to_NFA(self,regex:str,copy = False,to_dfa=False):
+    def regex_to_NFA(self,regex:str,new_copy = False,to_dfa=False):
         """Construct NFA from regular expressions.
 
         Args:
@@ -439,50 +447,135 @@ class NFA:
             re_trans[start].append((ch,{end}))
             return
 
-        def is_operand(ch:str)->bool:
-            """Judge if ch is a legal operand of the regex.
 
-            Args:
-                ch (str): ch with length of 1
-
-            Returns:
-                bool: result
-            """
-            if (ch>='0' and ch <='9') or\
-                (ch >= 'a' and ch <='z') or\
-                    (ch >='A' and ch <='Z'):
-                    return True
-            return False
-
-        def infix_to_postfix(infix_exp:str)->str:
+        def infix_to_postfix(infix_exp:str)->List[Tuple[str,int]]:
             """Convert infix_exp to postfix_exp.
 
             Args:
-                infix_exp (str): ends with '$'
+                infix_exp (str)
 
             Returns:
                 postfix_exp
             """
-            temp_str = ''
-            # And the connector if necessary.
-            for i in range(0,len(infix_exp)):
-                ch = infix_exp[i]
-                temp_str += ch
-                if i < len(infix_exp)-1:
-                    nextch = infix_exp[i+1]
-                    if (is_operand(ch) and  nextch == '(') or \
-                        (is_operand(ch) and is_operand(nextch)) or\
-                            (ch == '*' and is_operand(nextch)) or \
-                                (ch == '*' and nextch == '(') or \
-                                    (ch == ')' and nextch == '('):
-                        temp_str += '.'
-            st = []
-            postfix = ''
-            for i in range(0,len(temp_str)):
-                ch = temp_str[i]
-                if is_operand(ch):
-                    postfix += ch
+            nonlocal OPERAND,OPERATOR,IN_SET
+            property_level ={
+                '(': 1,
+                ')': 1,
+                '[': 1,
+                ']': 1,
+                '|': 2,
+                '.': 3,
+                '*': 4,
+                '+': 4,
+                '@': 5
+            }
+            custom_operator = {'.','@'} # for intermediate operation, not for regex expression
+            def if_connected(attr,ch,next_attr,next_ch)->bool:
+                if attr == OPERAND and  ((next_ch == '(' or next_ch == '[')and next_attr == OPERATOR):
+                    return True
+                elif attr == OPERAND and next_attr == OPERAND:
+                    return True
+                elif ((ch == '*' or ch == '+') and attr == OPERATOR) and next_attr == OPERAND:
+                    return True
+                elif ((ch == '*' or ch == '+') and attr == OPERATOR) and ((next_ch == '(' or next_ch == '[') and next_attr == OPERATOR):
+                    return True
+                elif ((ch == ')' or ch == ']') and attr == OPERATOR) and ((next_ch == '(' or next_ch == '[') and next_attr == OPERATOR):
+                    return True
+                elif ((ch == ')' or ch == ']') and attr == OPERATOR) and next_attr == OPERAND:
+                    return True
                 else:
+                    return False
+                pass
+            
+            def process_slash(pre_ch_attr):
+                ch_attr = []
+                for i in range(0,len(pre_ch_attr)):
+                    ch = pre_ch_attr[i][0]
+                    if i > 0 and pre_ch_attr[i-1][0] == '\\':
+                        continue
+                    if ch == '\\':
+                        if i < len(pre_ch_attr)-1:
+                            ch_attr.append((pre_ch_attr[i+1][0],OPERAND))
+                        continue
+                    if ch in property_level and ch not in custom_operator:
+                        ch_attr.append((ch,OPERATOR))
+                    else:
+                        ch_attr.append((ch,OPERAND))
+                return ch_attr
+
+            def process_character_set(pre_ch_attr):
+                # Check if character_set's formate is correct.
+                mark = 0
+                for ch ,attr in pre_ch_attr:
+                    if ch == '[' and attr == OPERATOR:
+                        mark = 1
+                    if ch == ']' and attr == OPERATOR:
+                        if mark == 1:
+                            mark = 0
+                if mark != 0:
+                    exit(-1)
+                
+                # Process set.
+                ch_attr = []
+                for i in range(0,len(pre_ch_attr)):
+                    ch = pre_ch_attr[i][0]
+                    attr = pre_ch_attr[i][1]
+                    if ch == '[' and attr == OPERATOR:
+                        mark = 1
+                        ch_attr.append((ch,attr))
+                        continue
+                    if ch == ']' and attr == OPERATOR:
+                        mark = 0
+                        ch_attr.append((ch,attr))
+                        ch_attr.append(('@',OPERATOR))
+                        continue
+                    if mark == 0:
+                        ch_attr.append((ch,attr))
+                    elif mark == 1:
+                        if ch == '-' and pre_ch_attr[i-1][0] != '['and pre_ch_attr[i+1][0] != ']':
+                            ch_begin = pre_ch_attr[i-1][0]
+                            ch_end = pre_ch_attr[i+1][0]
+                            # pop ch_begin
+                            ch_attr.pop()
+
+                            # push ch between ch_begin and ch_end
+                            for ch_idx in range(ord(ch_begin),ord(ch_end)):
+                                ch_attr.append((chr(ch_idx),IN_SET))
+                            
+                        else:
+                            ch_attr.append((ch,IN_SET))
+                return ch_attr
+            
+            def process_connection(pre_ch_attr):
+                ch_attr = []
+                for i in range(0,len(pre_ch_attr)):
+                    ch = pre_ch_attr[i][0]
+                    attr = pre_ch_attr[i][1]
+                    ch_attr.append(pre_ch_attr[i])
+                    if i < len(pre_ch_attr)-1:
+                        next_ch = pre_ch_attr[i+1][0]
+                        next_attr = pre_ch_attr[i+1][1]
+                        if if_connected(attr,ch,next_attr,next_ch) == True:
+                            ch_attr.append(('.',OPERATOR))
+                return ch_attr
+            
+            # Preprocess infix_exp.
+            ch_attr = [(c,0)for c in infix_exp]
+            ch_attr = process_slash(ch_attr)
+            
+            ch_attr = process_character_set(ch_attr)
+            
+            ch_attr = process_connection(ch_attr)
+            
+            
+            st = []
+            postfix_ch_attr = []
+            for i in range(0,len(ch_attr)):
+                ch = ch_attr[i][0]
+                attr = ch_attr[i][1]
+                if attr == OPERAND or attr == IN_SET:
+                    postfix_ch_attr.append((ch,attr))
+                elif attr == OPERATOR:
                     if len(st) == 0:# st is empty
                         st.append(ch)
                     else:
@@ -491,14 +584,22 @@ class NFA:
                         elif ch == ')':
                             top = st[len(st)-1]
                             while(top != '('):
-                                postfix += st.pop()
+                                postfix_ch_attr.append((st.pop(),OPERATOR))
+                                top = st[len(st)-1]
+                            st.pop()
+                        elif ch == '[':
+                            st.append(ch)
+                        elif ch == ']':
+                            top = st[len(st)-1]
+                            while(top != '['):
+                                postfix_ch_attr.append((st.pop(),OPERATOR))
                                 top = st[len(st)-1]
                             st.pop()
                         else:
                             top = st[len(st)-1]
                             if property_level[ch] <= property_level[top]:
                                 while property_level[top] >= property_level[ch]:
-                                        postfix += st.pop()
+                                        postfix_ch_attr.append((st.pop(),OPERATOR))
                                         if len(st) == 0:
                                             break
                                         else:
@@ -508,9 +609,9 @@ class NFA:
             while len(st)!= 0:
                 top = st[len(st)-1]
                 if top != '(' and top!= ')':
-                    postfix += top
+                    postfix_ch_attr.append((top,OPERATOR))
                 st.pop()
-            return postfix
+            return postfix_ch_attr
 
         def concat(start:str,end:str):
             """Generate transition for '.'
@@ -574,7 +675,32 @@ class NFA:
 
             return (new_start,new_end)
         
-        def trans_from_symbol(ch:str)->Tuple[str,str]:
+        def plus(start:str,end:str)->Tuple[str,str]:
+            """Generate transition of NFA on '+'
+
+            Args:
+                start (str): start state
+                end (str): end state
+
+            Returns:
+                Tuple[str,str]: new_start, new_end
+            """
+            # create new start and new end
+            nonlocal state_idx
+            new_start = new_state('left')
+            new_end = new_state('right')
+
+            # add trans for new start and new end
+            add_trans(new_start,start,self.__epsilon)
+
+            add_trans(end,start,self.__epsilon)
+
+            add_trans(end,new_end,self.__epsilon)
+
+            return (new_start,new_end)
+            pass
+
+        def trans_from_symbol(ch_set:set[str])->Tuple[str,str]:
             """Generate NFA from the symbol.
 
             Args:
@@ -586,8 +712,8 @@ class NFA:
             nonlocal state_idx
             new_start = new_state('right')
             new_end = new_state('right')
-
-            add_trans(new_start,new_end,ch)
+            for ch in ch_set:
+                add_trans(new_start,new_end,ch)
             return (new_start,new_end)
 
         if len(regex) == 0: # epsilon
@@ -600,6 +726,10 @@ class NFA:
             re_end = 's1'
 
         else:
+            OPERAND = 0
+            OPERATOR = 1
+            IN_SET = 2
+    
             re_alphabet = set()
             re_trans = dict()
             re_states = []
@@ -609,47 +739,54 @@ class NFA:
             state_idx = 0
             state_idx_left = -1
             state_idx_right = 0
-        
-            property_level ={
-                '(': 1,
-                ')': 1,
-                '|': 2,
-                '.': 3,
-                '*': 4
-            }
-            # Pre-check
-            for ch in regex:
-                if ch not in property_level.keys() and is_operand(ch) == False:
-                    print(f'Illegal character \'{ch}\'')
-                    return None
-        
-        
-            # set alphabet:
-            for ch in regex:
-                if is_operand(ch):
-                    re_alphabet.add(ch)
+    
+            # get postfix_ch_attr 
+            postfix_ch_attr = infix_to_postfix(regex)
+            
+            """
+            postfix_exp = ''.join(c for c,a in postfix_ch_attr)
+            print(postfix_exp)
+            """
 
             # generate NFA
-            postfix_exp = infix_to_postfix(regex)
+            
             st = [] # stack of NFA, format: [start_state,end_state]
-            for ch in postfix_exp:
-                if is_operand(ch):
-                    (start,end) = trans_from_symbol(ch)
+            tmp_alphabet_list = []
+            for ch,attr in postfix_ch_attr:
+                if attr == OPERAND:
+                    (start,end) = trans_from_symbol({ch})
+                    # set alphabet:
+                    re_alphabet.add(ch)
                     st.append((start,end))
-                elif ch == '*':
-                    (start,end) = st.pop()
-                    (start,end) = closure(start,end)
-                    st.append((start,end))
-                elif ch == '.':
-                    (start2,end2) = st.pop()
-                    (start1,end1) = st.pop()
-                    concat(end1,start2)
-                    st.append((start1,end2))
-                elif ch == '|':
-                    (start1,end1) = st.pop()
-                    (start2,end2) = st.pop()
-                    (start,end) = union(start1,end1,start2,end2)
-                    st.append((start,end))
+                elif attr == OPERATOR:
+                    if ch == '*':
+                        (start,end) = st.pop()
+                        (start,end) = closure(start,end)
+                        st.append((start,end))
+                    elif ch == '+':
+                        (start,end) = st.pop()
+                        (start,end) = plus(start,end)
+                        st.append((start,end))
+                    elif ch == '.':
+                        (start2,end2) = st.pop()
+                        (start1,end1) = st.pop()
+                        concat(end1,start2)
+                        st.append((start1,end2))
+                    elif ch == '|':
+                        (start1,end1) = st.pop()
+                        (start2,end2) = st.pop()
+                        (start,end) = union(start1,end1,start2,end2)
+                        st.append((start,end))
+                    elif ch == '@':
+                        # set alphabet:
+                        for c in tmp_alphabet_list:
+                            re_alphabet.add(c)
+
+                        (start,end) = trans_from_symbol(set(tmp_alphabet_list))
+                        st.append((start,end))
+                        tmp_alphabet_list.clear()
+                elif attr == IN_SET:
+                    tmp_alphabet_list.append(ch)
         
             (start,end) = st.pop()
             re_start = start
@@ -679,7 +816,7 @@ class NFA:
             re_start = f's{int(re_start)-idx_base}'
             re_end = f's{int(re_end)-idx_base}'
 
-        if copy == False:
+        if new_copy == False:
             self.clear()
             self.set_alphabet(re_alphabet)
             self.set_alphabet(re_alphabet)

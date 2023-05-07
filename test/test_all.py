@@ -1,5 +1,5 @@
-import DFA_test
-import NFA_test
+import test_DFA
+import test_NFA
 
 
 def test_all():
@@ -7,12 +7,12 @@ def test_all():
     """
     print('Executing tests...\n')
 
-    print('testing DFA_test...')
-    DFA_test.test_all()
+    print('testing test_DFA...')
+    test_DFA.test_all()
     print('test result: \033[32mpass\033[0m\n')
 
-    print('testing NFA_test...')
-    NFA_test.test_all()
+    print('testing test_NFA...')
+    test_NFA.test_all()
     print('test result: \033[32mpass\033[0m\n')
 
     print('All tests passed.')

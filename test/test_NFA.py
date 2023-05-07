@@ -53,9 +53,9 @@ def test_to_DFA():
     
     pass
 
-def test_regex_to_NFA():
+def test_regex_to_NFA1():
     n = NFA_SRC.NFA()
-    n.regex_to_NFA('(a|b)*abb',copy = False)
+    n.regex_to_NFA('(a|b)*abb',new_copy = False)
 
     assert n.run('abb') == True
     assert n.run('aabb') == True
@@ -66,10 +66,10 @@ def test_regex_to_NFA():
     assert n.run('b') == False
     assert n.run('ab') == False
 
-    n.regex_to_NFA('',copy=False)
+    n.regex_to_NFA('',new_copy=False)
     assert n.run('') == True
 
-    n.regex_to_NFA('1*0(0|1)*',copy=False)
+    n.regex_to_NFA('1*0(0|1)*',new_copy=False)
     d = n.to_DFA()
     d.minimize()
     assert len(d.Q()) == 2
@@ -77,11 +77,68 @@ def test_regex_to_NFA():
     assert d.run('1') == False
     assert d.run('111100001') == True
 
+def test_regex_to_NFA2():
+    n = NFA_SRC.NFA()
+    n.regex_to_NFA('(a|b)+',new_copy = False)
+    d = n.to_DFA().minimize(new_copy = True)
 
+def test_regex_to_NFA3():
+    digit1 = '(1|2|3|4|5|6|7|8|9)'
+    digit2 = '(0|1|2|3|4|5|6|7|8|9)'
+    s = f'0|({digit1}{digit2}*)'
+    n = NFA_SRC.NFA()
+    n.regex_to_NFA(s,new_copy = False)
+    d = n.to_DFA().minimize(new_copy = True)
+    assert d.run('0') == True
+    assert d.run('1') == True
+    assert d.run('123') == True
+    assert d.run('0123') ==False
+
+def test_regex_to_NFA4():
+    n = NFA_SRC.NFA()
+    n.regex_to_NFA('\\(',new_copy = False)
+    d = n.to_DFA().minimize(new_copy = True)
+    assert d.run('(') == True
+
+def test_regex_to_NFA5():
+    n = NFA_SRC.NFA()
+    n.regex_to_NFA('[a-z]+',new_copy = False)
+    d = n.to_DFA().minimize(new_copy = True)
+    for ch_idx in range(ord('a'),ord('z')+1):
+        assert d.run(chr(ch_idx)) == True
+
+def test_regex_to_NFA6():
+    n = NFA_SRC.NFA()
+    n.regex_to_NFA('[.*+|-]',new_copy = False)
+    d = n.to_DFA().minimize(new_copy = True)
+    assert d.run('.') == True
+    assert d.run('*') == True
+    assert d.run('+') == True
+    assert d.run('|') == True
+    assert d.run('-') == True
+
+
+def test_regex_to_NFA7():
+    n = NFA_SRC.NFA()
+    n.regex_to_NFA('[a-zA-Z_]+[a-zA-Z0-9_]*',new_copy = False)
+    d = n.to_DFA().minimize(new_copy=True)
+    assert d.run('0123') == False
+    assert d.run('_a7') == True
+    assert d.run('t0') == True
+
+    d.draw()
 def test_all():
     test_nfa1()
     test_to_DFA()
-    test_regex_to_NFA()
+    test_regex_to_NFA1()
+    test_regex_to_NFA2()
+    test_regex_to_NFA3()
+    test_regex_to_NFA4()
+    test_regex_to_NFA5()
+    test_regex_to_NFA6()
+    test_regex_to_NFA7()
+
 
 if __name__ == '__main__':
-    test_all()
+    test_regex_to_NFA7()
+    

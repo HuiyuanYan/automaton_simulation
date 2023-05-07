@@ -43,3 +43,20 @@ class NonexistentTransitionRule(Exception):
         self.ch = ch
     def __str__(self):
         return repr(f'nonexistent transition rule on state {self.state} for letter {self.ch}')
+    
+
+"""
+Exception for CFG.
+"""
+# LL1
+class LL_1_ConflictingEntry(Exception):
+    def __init__(self,variable,terminal,production1,production2) -> None:
+        self.variable = variable
+        self.terminal = terminal
+        self.production1 = production1
+        self.production2 = production2
+    
+    def __str__(self) -> str:
+        return repr(f'Conflicting entries appeared at M[{self.variable},{self.terminal}] when constructing LL1 analysis table M:\n'\
+                    f'{self.production1}\n'\
+                    f'{self.production2}')
